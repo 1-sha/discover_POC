@@ -1,0 +1,6 @@
+<ul id="authors">
+    Lobbies : 
+    {% for lobby in lobbies %}
+    <li><a href="{{page.url}}{{lobby.id}}">{{lobby.id}}</a></li>
+    {% endfor %}
+</ul>
