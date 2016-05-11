@@ -13,7 +13,9 @@ var storage = require('node-persist');
 
 var client_path = path.resolve(__dirname, '../client'); //adresse du dossier client
 
-var userStorage = storage.create();
+var userStorage = storage.create(); 
+
+var commands;
 
 var lobbies = [{id: 'ABCD'},{id: 'EFGH'},{id: 'IJKL'}]; //données test
 var client = {
@@ -58,7 +60,23 @@ function ctrlIndex(req, res) {
 io.on('connection', function(socket){
   console.log('a user connected');
   io.emit('update:connect','connecté');
+
+  for(var cmd in commands)
+  {
+    socket.on(cmd, commands[cmd]);
+  }
+
 });
+
+// Listeners
+commands = {
+  'cmd:move' : cmdMove
+};
+
+function cmdMove(str) {
+  console.log(str);
+}
+
 
 /**************************************/
 /************** SERVER ****************/
