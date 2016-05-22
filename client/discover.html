@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Discover POC</title>
+        <link rel="stylesheet" type="text/css" href="css/style.css">
+    </head>
+    <body>
+        <header>Discover</header>
+        <canvas id="gamewindow"></canvas>
+        <div id="output"></div>
+        <div class="right-pannel">
+            <table>
+                <tr><td>hovered :</td><td id="disp_hov"></td></tr>
+                <tr><td>discovered :</td><td id="disp_disc"></td></tr>
+                <tr><td>manually discovered :</td><td id="disp_mdisc"></td></tr>
+            </table>
+        </div>
+        <script src="app/lib/socket.io/socket.io.js"></script>
+        <script src="app/lib/jquery/jquery.min.js"></script>
+        <script src="app/discover.js" type="text/javascript"></script>
+    </body>
+</html>

@@ -2,8 +2,31 @@
 
 body {
     background-color: #EEE;
+    text-align: center;
 }
 
 #gamewindow {
     background-color: #FFF;
+}
+
+#new_lobby_form {
+    display: none;
+}
+
+#create_button {
+    cursor: pointer;
+}
+
+.message, .message_error, .message_valid {
+    color: #EEE;
+    font-family: verdana;
+    font-size: 8px;
+}
+
+.message_error {
+    color: #E00;
+}
+
+.message_valid {
+    color: #0E0;
 }

@@ -1,6 +1,6 @@
-<ul id="authors">
+<ul id="authors" class="listLobby">
     Lobbies : 
-    {% for lobby in lobbies %}
-    <li><a href="{{page.url}}{{lobby.id}}">{{lobby.id}}</a></li>
+    {% for id, lobby in lobbies %}
+    <li><a href="{{page.url}}{{id}}">{{id}}</a> [{{lobby.users.length}}p] <!-- ajouter playtime, nsfw, nb px, completion --></li>
     {% endfor %}
 </ul>

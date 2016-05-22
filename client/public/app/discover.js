@@ -1,7 +1,22 @@
-var sio = io.connect('http://localhost:8080');
+//@todo: masquer le système de connexion
+var userID = null;
+if (!!window.localStorage) {
+	if (!!localStorage.userID) {
+		userID = localStorage.userID;
+	}
+}
 
-sio.on('update:connect', function(msg) {
-    console.log(msg);
+var sio = io.connect('http://localhost:8080', {query: 'userID='+userID});
+
+sio.on('update:connect', function(user) {
+    localStorage.userID = user.id;
+    $('#disp_hov').html(user.hov);
+    $('#disp_disc').html(user.disc);
+    $('#disp_mdisc').html(user.mdisc);
+});
+
+sio.on('update:hovered', function(data) {
+    $('#disp_hov').html(data);
 });
 
 $('#gamewindow').mousemove(scrub);
@@ -29,7 +44,7 @@ function absolutePosition(event) {
 
 function scrub(event) {
 	if (this.is4ms === undefined) {
-		this.is4ms = timeCheckFactory(16);
+		this.is4ms = timeCheckFactory(4);
 	}
 	if (this.lastPos === undefined) {
 		this.lastPos = {};
@@ -40,7 +55,7 @@ function scrub(event) {
 		if (( pos.x != this.lastPos.x ) || ( pos.y != this.lastPos.y )) {
 			this.lastPos = pos;
 
-			sio.emit('cmd:move',"x: " + pos.x + " y: " + pos.y);
+			sio.emit('cmd:move', pos);
 		}
 	}
 }
