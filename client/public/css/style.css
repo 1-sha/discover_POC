@@ -3,6 +3,44 @@
 body {
     background-color: #EEE;
     text-align: center;
+    width: 700px;
+    margin: 0 auto;
+    color: #55A;
+    font-size: 20px;
+}
+
+header {
+    padding: 7px;
+    font-size: 40px;
+    font-family: verdana;
+    font-weight: bold;
+}
+
+header a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.main-frame {
+    width: 100%;
+    text-align: center;
+    display: inline-block;
+}
+
+#listLobby {
+    display: inherit;
+    font-family: Arial;
+    list-style: none;
+}
+
+#listLobby a {
+    text-decoration: none;
+    color: #ABF;
+}
+
+#listLobby a:hover {
+    text-decoration: none;
+    color: white;
 }
 
 #gamewindow {
@@ -15,12 +53,31 @@ body {
 
 #create_button {
     cursor: pointer;
+    padding: 20px;
+    border: white dashed 3px;
+    border-radius: 5px;
+    background-color: #ABF;
+    display: inline-block;
+    color: white;
+    font-family: Arial;
+    font-weight: bold;
+}
+
+#create_button:hover {
+    background-color: #55A;
+    border: #EEE dashed 3px;
+    color: #EEE;
+}
+
+.creator {
+   padding: 10px;
+   margin: 20px;
 }
 
 .message, .message_error, .message_valid {
-    color: #EEE;
+    color: #55A;
     font-family: verdana;
-    font-size: 8px;
+    font-size: 13px;
 }
 
 .message_error {

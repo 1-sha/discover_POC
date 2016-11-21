@@ -6,10 +6,13 @@
         <link rel="stylesheet" type="text/css" href="css/style.css">
     </head>
     <body>
-        {% include "lobbies.njk" %}
-        <div class="creator">
-            <div class="message" id="form_output">Choose an image</div>
-            <div id="create_button">Create a lobby!</div>
+        <header>Discover_POC</header>
+        <div class="main-frame">
+            <div class="creator">
+                <div class="message" id="form_output">Join a lobby or create one to start playing</div>
+                <div id="create_button">Create a lobby!</div>
+            </div>
+            {% include "lobbies.njk" %}
         </div>
         <form action="/" id="new_lobby_form" method="post" enctype="multipart/form-data">
             <input type="file" name="lobby_img" id="file_image"/><br/>
