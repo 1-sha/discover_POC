@@ -154,7 +154,8 @@ io.on('connection', function(socket) {
     },
     img: {
       w: lobbies[socket.lbid].img.width,
-      h: lobbies[socket.lbid].img.height
+      h: lobbies[socket.lbid].img.height,
+      map: lobbies[socket.lbid].img.map
     }
    
   }); 
@@ -185,7 +186,6 @@ function cmdMove(pos) {
     data.hover = ++this.user.stats.pxlHovered;
 
     if (!lobbies[this.lbid].img.map[pos.x][pos.y]) {
-      lobbies[this.lbid].img.map[pos.x][pos.y] = true;
 
       data.scrub = ++this.user.stats.pxlScrub;
       data.scrubM = ++this.user.stats.pxlScrubM;
@@ -194,14 +194,15 @@ function cmdMove(pos) {
       color.r = lobbies[this.lbid].img.data.get(pos.x,pos.y,0);
       color.g = lobbies[this.lbid].img.data.get(pos.x,pos.y,1);
       color.b = lobbies[this.lbid].img.data.get(pos.x,pos.y,2);
+
+      lobbies[this.lbid].img.map[pos.x][pos.y] = color;
+
       data.color = color;
     }
     userStorage.setItem(this.user.key, this.user);
 
 
     this.emit('update:hovered', data);
-  } else {
-    console.log ('k den');
   }
 }
 

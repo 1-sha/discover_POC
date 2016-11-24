@@ -7,6 +7,8 @@ if (!!window.localStorage) {
 }
 
 var imgSize = {w:0,h:0};
+var ctx = document.getElementById('gamewindow').getContext('2d');
+var pxl = ctx.createImageData(1,1);
 
 var sio = io.connect('http://localhost:8080', {query: 'userID='+userID+'&lbID='+window.location.pathname.substr(1)});
 
@@ -20,10 +22,18 @@ sio.on('update:connect', function(data) {
     imgSize.h = data.img.h;
 
     $('#gamewindow').prop('width',imgSize.w).prop('height',imgSize.h);
+
+    pxl.data[3] = 255;
+    for (var j,i=0;i<imgSize.w;i++)
+    	for (j=0;j<imgSize.h;j++) 
+    		if (data.img.map[i][j]) {
+	    		pxl.data[0] = data.img.map[i][j].r;
+		    	pxl.data[1] = data.img.map[i][j].g;
+		    	pxl.data[2] = data.img.map[i][j].b;
+	    		ctx.putImageData(pxl, i, j);
+    }
 });
 
-var ctx = document.getElementById('gamewindow').getContext('2d');
-var pxl = ctx.createImageData(1,1);
 
 sio.on('update:hovered', function(data) {
     if (!!data.hover) $('#disp_hov').html(data.hover);
@@ -82,7 +92,7 @@ function scrub(event) {
 		if ( (( pos.x != this.lastPos.x ) || ( pos.y != this.lastPos.y ))
 			&& (pos.x >= 0) && (pos.x < imgSize.w)
 			&& (pos.x >= 0) && (pos.x < imgSize.h) ) {
-			pos.x++;
+
 			this.lastPos = pos;
 			sio.emit('cmd:move', pos);
 		}
