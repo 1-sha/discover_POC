@@ -16,7 +16,7 @@ var formReader = require('multer')();
 
 var client_path = path.resolve(__dirname, '../client'); //adresse du dossier client
 
-var userStorage = storage.create(); 
+var userStorage = storage.create();
 
 var commands;
 
@@ -65,12 +65,8 @@ function ctrlIndex(req, res) {
 //Renvoie la page d'un salon
 function ctrlConnectLobby(req, res) {
 
-  var lobby = req.params.lbid; //id du lobby
+  var lobby = req.params.lbid;
   if (lobby in lobbies) { 
-  //@todo : send static lobby page
-    // res.setHeader('Content-Type', 'text/plain');
-    // res.end('Server ' + lobbies[lobby].id + " is online !\n"
-    // + lobbies[lobby].users.length + " client connected");
     res.sendFile(client_path + '/discover.html');
   } else {
     res.redirect("/");
@@ -97,7 +93,7 @@ function ctrlNewLobby(req, res) {
   if (req.file) {
     getPixels(req.file.buffer, req.file.mimetype, function(err, pixels) {
       if (err) {
-        console.log("Error when trying to read image data on : " + err);
+        console.log("Error when trying to read image data : " + err);
 
         res.redirect("/");
       } else {
@@ -108,12 +104,7 @@ function ctrlNewLobby(req, res) {
 
         lobbies[lbid] = newServer(lbid, pixels);
 
-        var dataInfo = pixels.shape.slice();
-        console.log("New lobby created - ID("+lbid+")"
-        + "\nImgData info : \n" 
-        + "\twidth :\t" + dataInfo[0] + "\n"
-        + "\theight :\t" + dataInfo[1] + "\n"
-        + "\tchannels :\t" + dataInfo[2]+ "\n");
+        console.log("New lobby created - ID("+lbid+")");
 
         res.redirect("/"+lbid);
       }
@@ -126,7 +117,17 @@ function ctrlNewLobby(req, res) {
 
 /**************************************/
 /******** Socket.io listeners *********/
-
+io.use(function(socket, next){
+  var lbid = socket.handshake.query.lbID || null;
+  if (!!lobbies[lbid]) {
+    console.log('SocketIO : connection accepted on '+lbid);
+    next();          
+  } else {
+    console.log('SocketIO : connection denied on '+lbid+', lobby does not exist');
+    next(new Error('Failed to connect.'));                  
+  }
+  return;
+});
 io.on('connection', function(socket) {
 
   var userID = socket.handshake.query.userID;
@@ -141,13 +142,21 @@ io.on('connection', function(socket) {
   }
 
   socket.user = userStorage.getItem('USER_' + userID);
-  console.log(socket.user.key + ' connected');
+  socket.lbid = socket.handshake.query.lbID;
+  console.log(socket.user.key + ' connected on ' + socket.lbid);
   
   socket.emit('update:connect', {
-    id: socket.user.id,
-    hov: socket.user.stats.pxlHovered,
-    disc: socket.user.stats.pxlScrub,
-    mdisc: socket.user.stats.pxlScrubM
+    user: {
+      id: socket.user.id,
+      hov: socket.user.stats.pxlHovered,
+      disc: socket.user.stats.pxlScrub,
+      mdisc: socket.user.stats.pxlScrubM
+    },
+    img: {
+      w: lobbies[socket.lbid].img.width,
+      h: lobbies[socket.lbid].img.height
+    }
+   
   }); 
 
   for(var cmd in commands)
@@ -167,10 +176,33 @@ commands = {
 
 function cmdMove(pos) {
 
-  this.user.stats.pxlHovered++;
-  userStorage.setItem(this.user.key, this.user);
+  if ((pos.x >= 0) && (pos.x < lobbies[this.lbid].img.width)
+    && (pos.y >= 0) && (pos.y < lobbies[this.lbid].img.height)) {
+    var data = {};
 
-  this.emit('update:hovered', this.user.stats.pxlHovered);
+    data.pos = pos;
+
+    data.hover = ++this.user.stats.pxlHovered;
+
+    if (!lobbies[this.lbid].img.map[pos.x][pos.y]) {
+      lobbies[this.lbid].img.map[pos.x][pos.y] = true;
+
+      data.scrub = ++this.user.stats.pxlScrub;
+      data.scrubM = ++this.user.stats.pxlScrubM;
+
+      var color = {};
+      color.r = lobbies[this.lbid].img.data.get(pos.x,pos.y,0);
+      color.g = lobbies[this.lbid].img.data.get(pos.x,pos.y,1);
+      color.b = lobbies[this.lbid].img.data.get(pos.x,pos.y,2);
+      data.color = color;
+    }
+    userStorage.setItem(this.user.key, this.user);
+
+
+    this.emit('update:hovered', data);
+  } else {
+    console.log ('k den');
+  }
 }
 
 function cmdScrub(pos) {
@@ -237,7 +269,10 @@ function newServer(suid, imgData)
   var info = imgData.shape.slice();
   var w = info[0],
     h = info[1];
-  
+
+  var map = new Array(w);
+  for (var i=0;i<map.length;i++) map[i] = new Array(h).fill(false);
+
   return {
     id : suid,
     users : [],
@@ -245,7 +280,7 @@ function newServer(suid, imgData)
       data : imgData,
       width : w,
       height : h,
-      map : new Array(w).fill(new Array(h).fill(false)),
+      map : map, 
       pxlCount : w*h,
       pxlFound : 0
     },
