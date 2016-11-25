@@ -1,4 +1,3 @@
-//@todo: masquer le système de connexion
 var userID = null;
 if (!!window.localStorage) {
 	if (!!localStorage.userID) {
@@ -13,7 +12,11 @@ var pxl = ctx.createImageData(1,1);
 var sio = io.connect('http://localhost:8080', {query: 'userID='+userID+'&lbID='+window.location.pathname.substr(1)});
 
 sio.on('update:connect', function(data) {
-    localStorage.userID = data.user.id;
+    if (!!window.localStorage) {
+    	localStorage.userID = data.user.id;
+	} 
+	userID = data.user.id;
+
     $('#disp_hov').html(data.user.hov);
     $('#disp_disc').html(data.user.disc);
     $('#disp_mdisc').html(data.user.mdisc);
@@ -50,20 +53,23 @@ sio.on('update:hovered', function(data) {
     }
 });
 
-$('#gamewindow').mousemove(scrub);
+
+sio.on('update:change', function(data) {
+    for (var i = 0; i < data.length; i++)
+    	if (data[i].uid != userID) {
+			pxl.data[0] = data[i].pxl.r;
+			pxl.data[1] = data[i].pxl.g;
+			pxl.data[2] = data[i].pxl.b;
+			pxl.data[3] = 255;
+
+			ctx.putImageData(pxl, data[i].x, data[i].y);
+    }
+});
+
+
+$('#gamewindow').mousemove(discover);
 
 function relativePosition(elem,pos) {
-	// var elemRect = elem.getBoundingClientRect();
-	// var bodyRect = document.body.getBoundingClientRect();
-	// var offset = {
-	// 	left: Math.round(elemRect.left - bodyRect.left),
-	// 	top: Math.round(elemRect.top - bodyRect.top)
-	// };
-
-	// return {
-	// 	x: pos.x - offset.left,
-	// 	y: pos.y - offset.top
-	// };
 	var offset = $(elem).offset();
 	return {
 		x: pos.x - Math.round(offset.left),
@@ -78,7 +84,7 @@ function mousePosition(event) {
 	};
 }
 
-function scrub(event) {
+function discover(event) {
 	if (this.is4ms === undefined) {
 		this.is4ms = timeCheckFactory(4);
 	}
@@ -94,7 +100,7 @@ function scrub(event) {
 			&& (pos.x >= 0) && (pos.x < imgSize.h) ) {
 
 			this.lastPos = pos;
-			sio.emit('cmd:move', pos);
+			sio.emit('cmd:hover', pos);
 		}
 	}
 }

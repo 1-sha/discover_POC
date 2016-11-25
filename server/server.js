@@ -44,7 +44,6 @@ app.use(express.static(client_path + '/public'));
 //get
 app.get('/', ctrlIndex);
 app.get('/:lbid', ctrlConnectLobby);
-app.get('/delete/:suid', ctrlDelete);
 
 //post
 app.post('/', formReader.single('lobby_img'), ctrlNewLobby);
@@ -73,20 +72,6 @@ function ctrlConnectLobby(req, res) {
   }
 }
 
-function ctrlDelete(req, res) {
-
-  var suid = req.params.suid;
-  if (typeof lobbies[suid] != 'undefined')
-  {
-    deleteServer(suid);
-    console.log("Server " + suid + " succesfully deleted !");
-  }
-  else
-  {
-    console.log("Server " + suid + " doesn't exist.");
-  }
-}
-
 //Créer un nouveau salon
 function ctrlNewLobby(req, res) {
 //@todo : rework de la fonction. Lobby().error si une erreur est survenue.
@@ -98,6 +83,7 @@ function ctrlNewLobby(req, res) {
         res.redirect("/");
       } else {
       //@todo : tester si l'image correspond à certains critères
+      //@todo : ajouter un nombre max de lobby
         var lbid;
 
         do lbid = genLbid(); while (!!lobbies[lbid]);
@@ -117,21 +103,22 @@ function ctrlNewLobby(req, res) {
 
 /**************************************/
 /******** Socket.io listeners *********/
-io.use(function(socket, next){
+io.use(function(socket, next) {
+
   var lbid = socket.handshake.query.lbID || null;
+
   if (!!lobbies[lbid]) {
-    console.log('SocketIO : connection accepted on '+lbid);
     next();          
   } else {
     console.log('SocketIO : connection denied on '+lbid+', lobby does not exist');
     next(new Error('Failed to connect.'));                  
   }
+
   return;
 });
 io.on('connection', function(socket) {
 
   var userID = socket.handshake.query.userID;
-  //socket.user = userStorage.getItem(userID) || newClient(genUUID();
   
   if (!userStorage.getItem('USER_' + userID)) {
     userID = genUUID();
@@ -143,7 +130,8 @@ io.on('connection', function(socket) {
 
   socket.user = userStorage.getItem('USER_' + userID);
   socket.lbid = socket.handshake.query.lbID;
-  console.log(socket.user.key + ' connected on ' + socket.lbid);
+
+  console.log('SocketIO : connection accepted on '+socket.lbid+' from '+socket.user.key);
   
   socket.emit('update:connect', {
     user: {
@@ -157,68 +145,53 @@ io.on('connection', function(socket) {
       h: lobbies[socket.lbid].img.height,
       map: lobbies[socket.lbid].img.map
     }
-   
   }); 
 
   for(var cmd in commands)
   {
     socket.on(cmd, commands[cmd]);
   }
-
 });
 
 // Listeners
 commands = {
-  'cmd:move'  : cmdMove,
-  'cmd:scrub' : cmdScrub,
+  'cmd:hover'  : cmdHover,
   'cmd:use'   : cmdUse,
   'cmd:buy'   : cmdBuy
 };
 
-function cmdMove(pos) {
-
+function cmdHover(pos) {
   if ((pos.x >= 0) && (pos.x < lobbies[this.lbid].img.width)
     && (pos.y >= 0) && (pos.y < lobbies[this.lbid].img.height)) {
     var data = {};
 
-    data.pos = pos;
-
-    data.hover = ++this.user.stats.pxlHovered;
-
-    if (!lobbies[this.lbid].img.map[pos.x][pos.y]) {
-
-      data.scrub = ++this.user.stats.pxlScrub;
-      data.scrubM = ++this.user.stats.pxlScrubM;
-
-      var color = {};
-      color.r = lobbies[this.lbid].img.data.get(pos.x,pos.y,0);
-      color.g = lobbies[this.lbid].img.data.get(pos.x,pos.y,1);
-      color.b = lobbies[this.lbid].img.data.get(pos.x,pos.y,2);
-
+    if (!lobbies[this.lbid].img.map[pos.x][pos.y]) { //nouveau pixel découvert
+      var color = {
+        r : lobbies[this.lbid].img.data.get(pos.x,pos.y,0),
+        g : lobbies[this.lbid].img.data.get(pos.x,pos.y,1),
+        b : lobbies[this.lbid].img.data.get(pos.x,pos.y,2)
+      };
       lobbies[this.lbid].img.map[pos.x][pos.y] = color;
 
-      data.color = color;
-    }
-    userStorage.setItem(this.user.key, this.user);
+      var change = {
+        x: pos.x,
+        y: pos.y,
+        pxl: color,
+        uid: this.user.id
+      };
+      lobbies[this.lbid].img.changes.push(change);
 
+      data.color = color;
+      data.scrub = ++this.user.stats.pxlScrub;
+      data.scrubM = ++this.user.stats.pxlScrubM;
+    }
+    data.pos = pos;
+    data.hover = ++this.user.stats.pxlHovered;
+
+    userStorage.setItem(this.user.key, this.user);
 
     this.emit('update:hovered', data);
   }
-}
-
-function cmdScrub(pos) {
-
-  this.user.stats.pxlScrubM += 1;
-
-  this.user.stats.pxlScrub += 1;
-  userStorage.setItem(this.user.key, this.user);
-
-  var data = {
-    scrub   : this.user.stats.pxlScrub, 
-    scrubM  : this.user.stats.pxlScrubM
-  };
-
-  this.emit('update:scrub', data);
 }
 
 function cmdUse(pos, id) {
@@ -283,9 +256,16 @@ function newServer(suid, imgData)
       height : h,
       map : map, 
       pxlCount : w*h,
-      pxlFound : 0
+      pxlFound : 0,
+      changes : []
     },
     startTime : new Date(),
+    emitChanges : setInterval(function() { //risque de concurrence
+      if (lobbies[suid].img.changes.length != 0) {
+        io.emit('update:change', lobbies[suid].img.changes);
+        lobbies[suid].img.changes.length = 0;
+      }
+    }, 333)
   };
 }
 
