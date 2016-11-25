@@ -108,6 +108,7 @@ io.use(function(socket, next) {
   var lbid = socket.handshake.query.lbID || null;
 
   if (!!lobbies[lbid]) {
+    socket.join(lbid);
     next();          
   } else {
     console.log('SocketIO : connection denied on '+lbid+', lobby does not exist');
@@ -262,7 +263,7 @@ function newServer(suid, imgData)
     startTime : new Date(),
     emitChanges : setInterval(function() { //risque de concurrence
       if (lobbies[suid].img.changes.length != 0) {
-        io.emit('update:change', lobbies[suid].img.changes);
+        io.to(suid).emit('update:change', lobbies[suid].img.changes);
         lobbies[suid].img.changes.length = 0;
       }
     }, 333)
